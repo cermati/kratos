@@ -289,6 +289,39 @@ func (p *Persister) GetIdentity(ctx context.Context, id uuid.UUID) (*identity.Id
 	return &i, nil
 }
 
+func (p *Persister) GetIdentityByCredentialsIdentifier(
+	ctx context.Context,
+	match string,
+) (*identity.Identity, error) {
+	var find struct {
+		IdentityID uuid.UUID `db:"identity_id"`
+	}
+
+	err := p.GetConnection(ctx).RawQuery(
+		` SELECT
+        ic.identity_id
+      FROM identity_credentials ic
+        INNER JOIN identity_credential_identifiers ici ON ic.id = ici.identity_credential_id
+      WHERE ici.identifier = ?`,
+		match,
+	).First(&find)
+
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, herodot.ErrNotFound.WithTrace(err).WithReasonf(`No identity matching credentials identifier "%s" could be found.`, match)
+		}
+
+		return nil, sqlcon.HandleError(err)
+	}
+
+	i, err := p.GetIdentityConfidential(ctx, find.IdentityID)
+	if err != nil {
+		return nil, err
+	}
+
+	return i.CopyWithoutCredentials(), nil
+}
+
 func (p *Persister) GetIdentityConfidential(ctx context.Context, id uuid.UUID) (*identity.Identity, error) {
 	var i identity.Identity
 	if err := p.GetConnection(ctx).Eager().Find(&i, id); err != nil {
