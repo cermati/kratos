@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 
@@ -156,7 +157,18 @@ type getIdentityParameters struct {
 //       400: genericError
 //       500: genericError
 func (h *Handler) get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	i, err := h.r.IdentityPool().GetIdentity(r.Context(), x.ParseUUID(ps.ByName("id")))
+	var i *Identity
+	var err error
+
+	id := ps.ByName("id")
+
+	// If the id is not a valid UUID, assume that it is a credential identifier
+	if _, _err := uuid.Parse(id); _err != nil {
+		i, err = h.r.IdentityPool().GetIdentityByCredentialsIdentifier(r.Context(), id)
+	} else {
+		i, err = h.r.IdentityPool().GetIdentity(r.Context(), x.ParseUUID(id))
+	}
+
 	if err != nil {
 		h.r.Writer().WriteError(w, r, err)
 		return

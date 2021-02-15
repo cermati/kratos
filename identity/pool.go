@@ -40,6 +40,10 @@ type (
 		// connectivity is broken.
 		GetIdentity(context.Context, uuid.UUID) (*Identity, error)
 
+		// GetIdentityByCredentialsIdentifier returns an identity by querying for it's credential identifiers.
+		// Will return an error if the identity does not exist or backend connectivity is broken.
+		GetIdentityByCredentialsIdentifier(ctx context.Context, match string) (*Identity, error)
+
 		// FindVerifiableAddressByValue returns a matching address or sql.ErrNoRows if no address could be found.
 		FindVerifiableAddressByValue(ctx context.Context, via VerifiableAddressType, address string) (*VerifiableAddress, error)
 
